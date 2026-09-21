@@ -2,12 +2,31 @@ name: Keep Streamlit App Awake
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # runs every 6 hours
-  workflow_dispatch:        # lets you trigger it manually from the Actions tab
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping the app
-        run: curl --fail --silent --show-error https://transitproject-research-vuatgshygv8a6bpv3pu6vm.streamlit.app/ || true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        run: |
+          npm install playwright
+          npx playwright install --with-deps chromium
+
+      - name: Visit app like a real browser
+        run: |
+          node -e "
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            await page.goto('https://transitproject-research-vuatgshygv8a6bpv3pu6vm.streamlit.app/', { waitUntil: 'networkidle', timeout: 60000 });
+            await page.waitForTimeout(5000);
+            await browser.close();
+          })();
+          "
